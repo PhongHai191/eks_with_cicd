@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       # -------------------------
-      # BUILD BACKEND (test only)
+      # BUILD BACKEND
       # -------------------------
       - name: Build Backend
         working-directory: "./webapp/backend"
@@ -22,7 +22,7 @@ jobs:
           docker build -t webapp-backend .
 
       # -------------------------
-      # BUILD FRONTEND (test only)
+      # BUILD FRONTEND
       # -------------------------
       - name: Build Frontend
         working-directory: "./webapp/frontend"
