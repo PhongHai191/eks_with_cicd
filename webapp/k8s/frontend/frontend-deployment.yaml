@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: webapp
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      nodeSelector:
+        role: app
+
+      containers:
+      - name: frontend
+        image: 529646246979.dkr.ecr.ap-southeast-2.amazonaws.com/webapp-frontend:1.0
+
+        ports:
+        - containerPort: 3000
