@@ -1,0 +1,30 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -------------------------
+      # BUILD BACKEND (test only)
+      # -------------------------
+      - name: Build Backend
+        working-directory: "./webapp/backend"
+        run: |
+          docker build -t webapp-backend .
+
+      # -------------------------
+      # BUILD FRONTEND (test only)
+      # -------------------------
+      - name: Build Frontend
+        working-directory: "./webapp/frontend"
+        run: |
+          docker build -t webapp-frontend .
