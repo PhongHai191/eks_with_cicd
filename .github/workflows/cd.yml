@@ -1,0 +1,107 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+  EKS_CLUSTER: ${{ secrets.EKS_CLUSTER_NAME }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -------------------------
+      # AWS AUTH
+      # -------------------------
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION \
+          | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      # -------------------------
+      # SET IMAGE TAG
+      # -------------------------
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      # -------------------------
+      # BUILD & PUSH BACKEND
+      # -------------------------
+      - name: Build & Push Backend
+        working-directory: "./webapp/backend"
+        run: |
+          docker build -t webapp-backend .
+          docker tag webapp-backend:latest $ECR_REGISTRY/webapp-backend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/webapp-backend:$IMAGE_TAG
+
+      # -------------------------
+      # BUILD & PUSH FRONTEND
+      # -------------------------
+      - name: Build & Push Frontend
+        working-directory: "./webapp/frontend"
+        run: |
+          docker build -t webapp-frontend .
+          docker tag webapp-frontend:latest $ECR_REGISTRY/webapp-frontend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/webapp-frontend:$IMAGE_TAG
+
+      # -------------------------
+      # CONNECT TO EKS
+      # -------------------------
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $EKS_CLUSTER
+
+      # -------------------------
+      # APPLY BASE MANIFESTS
+      # -------------------------
+      - name: Apply Kubernetes manifests
+        working-directory: "./webapp"
+        run: |
+          kubectl apply -f k8s/namespace.yml
+          kubectl apply -f k8s/storage/
+          kubectl apply -f k8s/postgres/
+          kubectl apply -f k8s/redis/
+          kubectl apply -f k8s/backend/
+          kubectl apply -f k8s/frontend/
+          kubectl apply -f k8s/monitoring/
+          kubectl apply -f k8s/ingress.yaml
+
+      # -------------------------
+      # UPDATE IMAGES 
+      # -------------------------
+      - name: Update backend image
+        run: |
+          kubectl set image deployment/backend \
+          backend=$ECR_REGISTRY/webapp-backend:$IMAGE_TAG \
+          -n webapp
+
+      - name: Update frontend image
+        run: |
+          kubectl set image deployment/frontend \
+          frontend=$ECR_REGISTRY/webapp-frontend:$IMAGE_TAG \
+          -n webapp
+
+      # -------------------------
+      # VERIFY ROLLOUT
+      # -------------------------
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/backend -n webapp
+          kubectl rollout status deployment/frontend -n webapp
