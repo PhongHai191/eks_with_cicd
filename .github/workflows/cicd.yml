@@ -45,7 +45,7 @@ jobs:
       - name: Build & Push Backend
         working-directory: "./webapp/backend"
         run: |
-          docker build -t webapp-backend /backend
+          docker build -t webapp-backend .
           docker tag webapp-backend:latest $ECR_REGISTRY/webapp-backend:$IMAGE_TAG
           docker push $ECR_REGISTRY/webapp-backend:$IMAGE_TAG
 
@@ -55,7 +55,7 @@ jobs:
       - name: Build & Push Frontend
         working-directory: "./webapp/frontend"
         run: |
-          docker build -t webapp-frontend /frontend
+          docker build -t webapp-frontend .
           docker tag webapp-frontend:latest $ECR_REGISTRY/webapp-frontend:$IMAGE_TAG
           docker push $ECR_REGISTRY/webapp-frontend:$IMAGE_TAG
 
