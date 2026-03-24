@@ -71,33 +71,24 @@ jobs:
       # -------------------------
       # APPLY BASE MANIFESTS
       # -------------------------
-      - name: Apply Kubernetes manifests
+      - name: Apply Kubernetes manifests (with image tag)
         working-directory: "./webapp"
         run: |
+          export IMAGE_TAG=${GITHUB_SHA}
+
+          # Backend
+          envsubst < k8s/backend/backend-deployment.yaml | kubectl apply -f -
+
+          # Frontend
+          envsubst < k8s/frontend/frontend-deployment.yaml | kubectl apply -f -
+
+          # Các resource khác 
           kubectl apply -f k8s/namespace.yml
           kubectl apply -f k8s/storage/
           kubectl apply -f k8s/postgres/
           kubectl apply -f k8s/redis/
-          kubectl apply -f k8s/backend/
-          kubectl apply -f k8s/frontend/
           kubectl apply -f k8s/monitoring/
           kubectl apply -f k8s/ingress.yaml
-
-      # -------------------------
-      # UPDATE IMAGES 
-      # -------------------------
-      - name: Update backend image
-        run: |
-          kubectl set image deployment/backend \
-          backend=$ECR_REGISTRY/webapp-backend:$IMAGE_TAG \
-          -n webapp
-
-      - name: Update frontend image
-        run: |
-          kubectl set image deployment/frontend \
-          frontend=$ECR_REGISTRY/webapp-frontend:$IMAGE_TAG \
-          -n webapp
-
       # -------------------------
       # VERIFY ROLLOUT
       # -------------------------
