@@ -37,7 +37,7 @@ function Navbar(){
 
    <div>
 
-    <Link to="/">Car</Link>
+    <Link to="/">Cars</Link>
 
    </div>
 
